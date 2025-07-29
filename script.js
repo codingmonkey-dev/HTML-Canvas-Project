@@ -285,16 +285,17 @@ function initFilterApp() {
     const contrastDisplay = document.getElementById('contrast-display');
     
     let currentImage = null;
+    let currentFilter = 'none'; // 현재 적용된 필터 추적
     
     // 슬라이더 값 표시 업데이트
     brightnessSlider.addEventListener('input', () => {
         brightnessDisplay.textContent = brightnessSlider.value + '%';
-        if (currentImage) applyFilters();
+        if (currentImage) applyAllFilters();
     });
     
     contrastSlider.addEventListener('input', () => {
         contrastDisplay.textContent = contrastSlider.value + '%';
-        if (currentImage) applyFilters();
+        if (currentImage) applyAllFilters();
     });
     
     // 파일 업로드 버튼 클릭
@@ -335,98 +336,132 @@ function initFilterApp() {
                 // 원본 이미지 데이터 저장
                 originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 currentImage = img;
+                currentFilter = 'none';
                 
                 // 슬라이더 초기화
                 brightnessSlider.value = 100;
                 contrastSlider.value = 100;
                 brightnessDisplay.textContent = '100%';
                 contrastDisplay.textContent = '100%';
+                
+                // 버튼 상태 초기화
+                updateButtonStates();
             };
             img.src = event.target.result;
         };
         reader.readAsDataURL(file);
     });
     
+    // 모든 필터 적용 (순서: 컬러필터 -> 밝기/대비)
+    function applyAllFilters() {
+        if (!originalImageData) return;
+        
+        // 1단계: 원본에서 시작
+        let imageData = ctx.createImageData(originalImageData);
+        let data = imageData.data;
+        const originalData = originalImageData.data;
+        
+        // 2단계: 컬러 필터 적용 (그레이스케일 또는 세피아)
+        if (currentFilter === 'grayscale') {
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = originalData[i] * 0.299 + originalData[i + 1] * 0.587 + originalData[i + 2] * 0.114;
+                data[i] = gray;     // R
+                data[i + 1] = gray; // G
+                data[i + 2] = gray; // B
+                data[i + 3] = originalData[i + 3]; // Alpha
+            }
+        } else if (currentFilter === 'sepia') {
+            for (let i = 0; i < data.length; i += 4) {
+                const r = originalData[i];
+                const g = originalData[i + 1];
+                const b = originalData[i + 2];
+                
+                data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));     // R
+                data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168)); // G
+                data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131)); // B
+                data[i + 3] = originalData[i + 3]; // Alpha
+            }
+        } else {
+            // 원본 복사
+            for (let i = 0; i < data.length; i++) {
+                data[i] = originalData[i];
+            }
+        }
+        
+        // 3단계: 밝기 및 대비 조절
+        const brightness = parseInt(brightnessSlider.value);
+        const contrast = parseInt(contrastSlider.value);
+        
+        if (brightness !== 100 || contrast !== 100) {
+            const brightnessAdjust = brightness - 100;
+            const contrastAdjust = contrast / 100;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                // 밝기 조절
+                let r = data[i] + brightnessAdjust;
+                let g = data[i + 1] + brightnessAdjust;
+                let b = data[i + 2] + brightnessAdjust;
+                
+                // 대비 조절
+                r = ((r - 128) * contrastAdjust) + 128;
+                g = ((g - 128) * contrastAdjust) + 128;
+                b = ((b - 128) * contrastAdjust) + 128;
+                
+                // 값 제한 (0-255)
+                data[i] = Math.max(0, Math.min(255, r));
+                data[i + 1] = Math.max(0, Math.min(255, g));
+                data[i + 2] = Math.max(0, Math.min(255, b));
+                // Alpha는 그대로 유지
+            }
+        }
+        
+        // 4단계: 캔버스에 적용
+        ctx.putImageData(imageData, 0, 0);
+    }
+    
+    // 버튼 상태 업데이트
+    function updateButtonStates() {
+        // 모든 버튼 비활성화
+        grayscaleBtn.classList.remove('active');
+        sepiaBtn.classList.remove('active');
+        originalBtn.classList.remove('active');
+        
+        // 현재 필터에 맞는 버튼 활성화
+        if (currentFilter === 'grayscale') {
+            grayscaleBtn.classList.add('active');
+        } else if (currentFilter === 'sepia') {
+            sepiaBtn.classList.add('active');
+        } else {
+            originalBtn.classList.add('active');
+        }
+    }
+    
     // 그레이스케일 필터
     function applyGrayscale() {
         if (!originalImageData) return;
-        
-        const imageData = ctx.createImageData(originalImageData);
-        const data = imageData.data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-            const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-            data[i] = gray;     // R
-            data[i + 1] = gray; // G
-            data[i + 2] = gray; // B
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
+        currentFilter = 'grayscale';
+        updateButtonStates();
+        applyAllFilters();
     }
     
     // 세피아 필터
     function applySepia() {
         if (!originalImageData) return;
-        
-        const imageData = ctx.createImageData(originalImageData);
-        const data = imageData.data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-            const r = data[i];
-            const g = data[i + 1];
-            const b = data[i + 2];
-            
-            data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));     // R
-            data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168)); // G
-            data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131)); // B
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
-    }
-    
-    // 밝기 및 대비 조절
-    function applyFilters() {
-        if (!originalImageData) return;
-        
-        const brightness = parseInt(brightnessSlider.value);
-        const contrast = parseInt(contrastSlider.value);
-        
-        const imageData = ctx.createImageData(originalImageData);
-        const data = imageData.data;
-        const originalData = originalImageData.data;
-        
-        const brightnessAdjust = brightness - 100;
-        const contrastAdjust = contrast / 100;
-        
-        for (let i = 0; i < data.length; i += 4) {
-            // 밝기 조절
-            let r = originalData[i] + brightnessAdjust;
-            let g = originalData[i + 1] + brightnessAdjust;
-            let b = originalData[i + 2] + brightnessAdjust;
-            
-            // 대비 조절
-            r = ((r - 128) * contrastAdjust) + 128;
-            g = ((g - 128) * contrastAdjust) + 128;
-            b = ((b - 128) * contrastAdjust) + 128;
-            
-            // 값 제한 (0-255)
-            data[i] = Math.max(0, Math.min(255, r));
-            data[i + 1] = Math.max(0, Math.min(255, g));
-            data[i + 2] = Math.max(0, Math.min(255, b));
-            data[i + 3] = originalData[i + 3]; // Alpha
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
+        currentFilter = 'sepia';
+        updateButtonStates();
+        applyAllFilters();
     }
     
     // 원본 복원
     function restoreOriginal() {
         if (!originalImageData) return;
-        ctx.putImageData(originalImageData, 0, 0);
+        currentFilter = 'none';
         brightnessSlider.value = 100;
         contrastSlider.value = 100;
         brightnessDisplay.textContent = '100%';
         contrastDisplay.textContent = '100%';
+        updateButtonStates();
+        applyAllFilters();
     }
     
     // 이벤트 리스너
