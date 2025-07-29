@@ -412,7 +412,7 @@ function initFilterApp() {
     }
     
     // TODO: 실습 4-6. 밝기/대비 조절 함수 만들기
-    function applyFilters() {
+    function applyAllFilters() {
         if (!originalImageData) return;
         
         // [실습] 슬라이더 값 가져오기
