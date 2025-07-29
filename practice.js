@@ -367,47 +367,11 @@ function initFilterApp() {
     
     // TODO: 실습 4-4. 그레이스케일 필터 만들기
     function applyGrayscale() {
-        if (!originalImageData) return;
-        
-        // [실습] 이미지 데이터 복사하기
-        
-        
-        
-        // [실습] 픽셀 데이터 처리하기
-        for (let i = 0; i < data.length; i += 4) {
-            // [실습] 그레이스케일 공식 적용하기
-            
-            
-            
-            
-        }
-        
-        // [실습] 변경된 데이터를 캔버스에 적용하기
         
     }
     
     // TODO: 실습 4-5. 세피아 필터 만들기
     function applySepia() {
-        if (!originalImageData) return;
-        
-        // [실습] 이미지 데이터 복사
-        
-        
-        
-        // [실습] 세피아 효과 적용
-        for (let i = 0; i < data.length; i += 4) {
-            // [실습] RGB 값 가져오기
-            
-            
-            
-            
-            // [실습] 세피아 공식 적용하기
-            
-            
-            
-        }
-        
-        // [실습] 캔버스에 적용
         
     }
     
